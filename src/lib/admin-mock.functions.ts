@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { assertPermission } from "@/lib/admin-permissions";
+import { mcqBulkImportItemSchema } from "@/lib/mcq-bulk-schema";
 
 const levelCode = z.string().trim().min(1).max(40);
 const statusEnum = z.enum(["draft", "published", "archived"]);
@@ -1199,24 +1200,7 @@ export const adminMockActivity = createServerFn({ method: "POST" })
 // Inserts MCQs into the bank under a chapter, then creates a mock test
 // referencing those MCQs. Mirrors MCQ Practice bulk upload, but produces a
 // mock test as the final artefact.
-const bulkMockItem = z.object({
-  question: z.string().trim().min(3).max(4000),
-  question_type: z.enum(["mcq", "true_false"]).default("mcq"),
-  option_a: z.string().trim().min(1).max(1000),
-  option_b: z.string().trim().min(1).max(1000),
-  option_c: z.string().trim().max(1000).nullable().optional(),
-  option_d: z.string().trim().max(1000).nullable().optional(),
-  correct_option: z.enum(["A", "B", "C", "D"]),
-  explanation: z.string().trim().max(4000).nullable().optional(),
-}).superRefine((v, ctx) => {
-  if (v.question_type === "true_false") {
-    if (!["A", "B"].includes(v.correct_option)) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "True/False correct_option must be A or B" });
-    }
-  } else if (!v.option_c || !v.option_c.trim() || !v.option_d || !v.option_d.trim()) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: "MCQ requires all four options" });
-  }
-});
+const bulkMockItem = mcqBulkImportItemSchema;
 
 const bulkMockInput = z.object({
   chapter_id: z.string().uuid().nullable().optional(),

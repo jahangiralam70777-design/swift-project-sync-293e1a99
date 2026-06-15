@@ -1194,3 +1194,101 @@ export const adminMockActivity = createServerFn({ method: "POST" })
     events.sort((a, b) => (b.at ?? "").localeCompare(a.at ?? ""));
     return { events: events.slice(0, data.limit) };
   });
+
+// ---------- Bulk Import Mock from parsed MCQs ----------
+// Inserts MCQs into the bank under a chapter, then creates a mock test
+// referencing those MCQs. Mirrors MCQ Practice bulk upload, but produces a
+// mock test as the final artefact.
+const bulkMockItem = z.object({
+  question: z.string().trim().min(3).max(4000),
+  question_type: z.enum(["mcq", "true_false"]).default("mcq"),
+  option_a: z.string().trim().min(1).max(1000),
+  option_b: z.string().trim().min(1).max(1000),
+  option_c: z.string().trim().max(1000).nullable().optional(),
+  option_d: z.string().trim().max(1000).nullable().optional(),
+  correct_option: z.enum(["A", "B", "C", "D"]),
+  explanation: z.string().trim().max(4000).nullable().optional(),
+});
+
+const bulkMockInput = z.object({
+  chapter_id: z.string().uuid(),
+  title: z.string().trim().min(2).max(200),
+  description: z.string().trim().max(2000).nullable().optional(),
+  level: levelCode.default("professional"),
+  subject_id: z.string().uuid().nullable().optional(),
+  duration_seconds: z.number().int().min(60).max(60 * 60 * 8).default(3600),
+  difficulty: difficultyEnum.default("medium"),
+  status: statusEnum.default("draft"),
+  is_public: z.boolean().default(true),
+  randomize_questions: z.boolean().default(true),
+  randomize_options: z.boolean().default(false),
+  negative_marking: z.number().min(0).max(5).default(0),
+  passing_marks: z.number().int().min(0).max(1000).default(0),
+  items: z.array(bulkMockItem).min(1).max(500),
+});
+
+export const adminBulkImportMock = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((i: z.infer<typeof bulkMockInput>) => bulkMockInput.parse(i))
+  .handler(async ({ data, context }) => {
+    await assertPermission(context.supabase, context.userId, "manage_content");
+    const sb = context.supabase;
+
+    const mcqRows = data.items.map((it) => ({
+      chapter_id: data.chapter_id,
+      question: it.question,
+      question_type: it.question_type,
+      option_a: it.option_a,
+      option_b: it.option_b,
+      option_c: it.question_type === "true_false" ? null : it.option_c ?? null,
+      option_d: it.question_type === "true_false" ? null : it.option_d ?? null,
+      correct_option: it.correct_option,
+      explanation: it.explanation ?? null,
+      difficulty: "medium" as const,
+      status: "published" as const,
+      tags: [] as string[],
+      created_by: context.userId,
+    }));
+
+    const { data: insertedMcqs, error: mcqErr } = await sb
+      .from("mcqs")
+      .insert(mcqRows)
+      .select("id");
+    if (mcqErr) throw mcqErr;
+    const mcqIds = (insertedMcqs ?? []).map((r: { id: string }) => r.id);
+    if (!mcqIds.length) throw new Error("No MCQs were inserted");
+
+    const { data: quiz, error: qErr } = await sb
+      .from("quizzes")
+      .insert({
+        title: data.title,
+        description: data.description ?? null,
+        level: data.level,
+        subject_id: data.subject_id ?? null,
+        chapter_id: data.chapter_id,
+        duration_seconds: data.duration_seconds,
+        total_questions: mcqIds.length,
+        difficulty: data.difficulty,
+        status: data.status,
+        is_public: data.is_public,
+        randomize_questions: data.randomize_questions,
+        randomize_options: data.randomize_options,
+        negative_marking: data.negative_marking,
+        passing_marks: data.passing_marks,
+        kind: "mock",
+        created_by: context.userId,
+      })
+      .select("id")
+      .single();
+    if (qErr) throw qErr;
+
+    const links = mcqIds.map((mcq_id, i) => ({
+      quiz_id: (quiz as { id: string }).id,
+      mcq_id,
+      position: i,
+    }));
+    const { error: linkErr } = await sb.from("quiz_questions").insert(links);
+    if (linkErr) throw linkErr;
+
+    return { mock_id: (quiz as { id: string }).id, inserted: mcqIds.length };
+  });

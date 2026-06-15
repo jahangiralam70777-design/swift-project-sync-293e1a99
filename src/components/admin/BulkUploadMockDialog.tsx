@@ -98,10 +98,17 @@ export function BulkUploadMockDialog({
     enabled: !!subjectId,
   });
   const existingQ = useQuery({
-    queryKey: ["bulk-existing-mcqs", chapterId],
-    queryFn: () => mcqListFn({ data: { chapterId, page: 1, pageSize: 500 } }),
-    enabled: !!chapterId,
+    queryKey: ["bulk-existing-mcqs", chapterId, subjectId],
+    queryFn: () =>
+      mcqListFn({
+        data:
+          chapterId === "__all__"
+            ? { subjectId, page: 1, pageSize: 500 }
+            : { chapterId, page: 1, pageSize: 500 },
+      }),
+    enabled: chapterId === "__all__" ? !!subjectId : !!chapterId,
   });
+
 
   const levels = (levelsQ.data ?? []) as Array<{ code: string; name: string }>;
   const subjects = useMemo(

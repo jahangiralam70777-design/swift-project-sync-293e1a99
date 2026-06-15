@@ -88,7 +88,7 @@ function parseBlock(raw: string): { mcq: ParsedMcq | null; reason?: string } {
           ? "B"
           : "A";
     if (!["true", "t", "a", "false", "f", "b"].includes(a))
-      return { mcq: null, reason: `Could not resolve True/False answer "${tfAnswer}"` };
+      return { mcq: null, reason: `Could not resolve True/False answer "${ansM[1].trim()}"` };
     return {
       mcq: {
         question: tfQuestion.slice(0, 4000),

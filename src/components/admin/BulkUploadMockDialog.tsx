@@ -385,7 +385,7 @@ export function BulkUploadMockDialog({
               </Badge>
             )}
             {!chapterId && rows.length > 0 && (
-              <span className="text-rose-400">Pick a chapter to enable import.</span>
+              <span className="text-rose-400">Pick a chapter (or All Chapters) to enable import.</span>
             )}
             {chapterId && !title.trim() && rows.length > 0 && (
               <span className="text-rose-400">Add a title to enable import.</span>

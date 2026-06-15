@@ -384,6 +384,7 @@ export function MockTestManagerFlow() {
   const [qgStatus, setQgStatus] = useState<"draft" | "published">("draft");
   const [qgSource, setQgSource] = useState<"random" | "smart" | "manual">("random");
   const [qgTab, setQgTab] = useState<"auto" | "bank" | "manual" | "import">("auto");
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
 
   // Subjects/chapters for Auto Generate selectors.
   const subjectsFn = useServerFn(adminListSubjectsByLevel);

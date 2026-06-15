@@ -203,8 +203,8 @@ export function BulkUploadMcqsDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-5xl">
-        <DialogHeader>
+      <DialogContent className="max-w-5xl flex max-h-[90vh] flex-col overflow-hidden p-0">
+        <DialogHeader className="shrink-0 px-6 pt-6 pb-2">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-[var(--neon-purple)]" /> Bulk Upload MCQs
           </DialogTitle>
@@ -213,6 +213,8 @@ export function BulkUploadMcqsDialog({
             preview, edit, then save. Duplicates are auto-detected.
           </DialogDescription>
         </DialogHeader>
+
+        <div className="flex-1 overflow-y-auto px-6">
 
         {/* Scope */}
         <div className="grid gap-2 rounded-xl border border-border/60 bg-background/40 p-3 sm:grid-cols-3">

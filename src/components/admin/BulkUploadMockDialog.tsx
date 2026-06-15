@@ -70,7 +70,8 @@ export function BulkUploadMockDialog({
 
   const [level, setLevel] = useState("");
   const [subjectId, setSubjectId] = useState("");
-  const [chapterId, setChapterId] = useState("");
+  const [chapterId, setChapterId] = useState(""); // "" = none, "__all__" = all chapters of subject
+
 
   const [title, setTitle] = useState("");
   const [durationMin, setDurationMin] = useState(30);

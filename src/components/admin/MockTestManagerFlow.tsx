@@ -98,6 +98,7 @@ import {
   adminAutoGenerateMock,
   adminMockDetail,
 } from "@/lib/admin-mock.functions";
+import { BulkUploadMockDialog } from "@/components/admin/BulkUploadMockDialog";
 import { lazy, Suspense } from "react";
 import type { MockCardKey } from "./MockCardDrawer";
 const MockCardDrawer = lazy(() =>

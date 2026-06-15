@@ -429,7 +429,7 @@ export function BulkUploadMockDialog({
 
         {/* Preview */}
         {rows.length > 0 && (
-          <div className="max-h-[42vh] overflow-y-auto rounded-xl border border-border/40">
+          <div className="rounded-xl border border-border/40">
             {rows.map((r, i) => (
               <div
                 key={i}

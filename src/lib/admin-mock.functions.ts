@@ -1211,7 +1211,7 @@ const bulkMockItem = z.object({
 });
 
 const bulkMockInput = z.object({
-  chapter_id: z.string().uuid(),
+  chapter_id: z.string().uuid().nullable().optional(),
   title: z.string().trim().min(2).max(200),
   description: z.string().trim().max(2000).nullable().optional(),
   level: levelCode.default("professional"),
@@ -1234,8 +1234,26 @@ export const adminBulkImportMock = createServerFn({ method: "POST" })
     await assertPermission(context.supabase, context.userId, "manage_content");
     const sb = context.supabase;
 
-    const mcqRows = data.items.map((it) => ({
-      chapter_id: data.chapter_id,
+    // Resolve chapters: a single chapter when provided, otherwise all chapters
+    // under the subject (round-robin assignment for the MCQ bank).
+    let chapterIds: string[] = [];
+    if (data.chapter_id) {
+      chapterIds = [data.chapter_id];
+    } else {
+      if (!data.subject_id) throw new Error("Pick a subject (or a chapter) first");
+      const { data: chs, error: chErr } = await sb
+        .from("chapters")
+        .select("id")
+        .eq("subject_id", data.subject_id)
+        .order("sort_order", { ascending: true });
+      if (chErr) throw chErr;
+      chapterIds = ((chs ?? []) as Array<{ id: string }>).map((c) => c.id);
+      if (!chapterIds.length)
+        throw new Error("Selected subject has no chapters. Create a chapter first.");
+    }
+
+    const mcqRows = data.items.map((it, i) => ({
+      chapter_id: chapterIds[i % chapterIds.length],
       question: it.question,
       question_type: it.question_type,
       option_a: it.option_a,
@@ -1265,7 +1283,7 @@ export const adminBulkImportMock = createServerFn({ method: "POST" })
         description: data.description ?? null,
         level: data.level,
         subject_id: data.subject_id ?? null,
-        chapter_id: data.chapter_id,
+        chapter_id: data.chapter_id ?? null,
         duration_seconds: data.duration_seconds,
         total_questions: mcqIds.length,
         difficulty: data.difficulty,

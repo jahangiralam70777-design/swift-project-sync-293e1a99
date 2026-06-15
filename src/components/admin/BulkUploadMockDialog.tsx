@@ -70,7 +70,8 @@ export function BulkUploadMockDialog({
 
   const [level, setLevel] = useState("");
   const [subjectId, setSubjectId] = useState("");
-  const [chapterId, setChapterId] = useState("");
+  const [chapterId, setChapterId] = useState(""); // "" = none, "__all__" = all chapters of subject
+
 
   const [title, setTitle] = useState("");
   const [durationMin, setDurationMin] = useState(30);
@@ -97,10 +98,17 @@ export function BulkUploadMockDialog({
     enabled: !!subjectId,
   });
   const existingQ = useQuery({
-    queryKey: ["bulk-existing-mcqs", chapterId],
-    queryFn: () => mcqListFn({ data: { chapterId, page: 1, pageSize: 500 } }),
-    enabled: !!chapterId,
+    queryKey: ["bulk-existing-mcqs", chapterId, subjectId],
+    queryFn: () =>
+      mcqListFn({
+        data:
+          chapterId === "__all__"
+            ? { subjectId, page: 1, pageSize: 500 }
+            : { chapterId, page: 1, pageSize: 500 },
+      }),
+    enabled: chapterId === "__all__" ? !!subjectId : !!chapterId,
   });
+
 
   const levels = (levelsQ.data ?? []) as Array<{ code: string; name: string }>;
   const subjects = useMemo(
@@ -162,13 +170,15 @@ export function BulkUploadMockDialog({
 
   const importM = useMutation({
     mutationFn: async () => {
-      if (!chapterId) throw new Error("Pick a chapter first");
+      if (!chapterId) throw new Error("Pick a chapter (or All Chapters) first");
+      if (chapterId === "__all__" && !subjectId)
+        throw new Error("Pick a subject to use All Chapters");
       if (!title.trim()) throw new Error("Give the mock test a title");
       if (!validRows.length) throw new Error("No MCQs to import");
       setProgress({ done: 0, total: validRows.length });
       const res = await importFn({
         data: {
-          chapter_id: chapterId,
+          chapter_id: chapterId === "__all__" ? null : chapterId,
           title: title.trim(),
           level: (level || "professional") as string,
           subject_id: subjectId || null,
@@ -195,6 +205,7 @@ export function BulkUploadMockDialog({
       setProgress({ done: res.inserted, total: validRows.length });
       return res;
     },
+
     onSuccess: (res) => {
       toast.success(`Mock created with ${res.inserted} questions`);
       qc.invalidateQueries({ queryKey: ["admin-mocks"] });
@@ -269,6 +280,7 @@ export function BulkUploadMockDialog({
               <SelectValue placeholder={subjectId ? "Chapter" : "Pick a subject first"} />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="__all__">All Chapters (subject-wide)</SelectItem>
               {chapters.map((c) => (
                 <SelectItem key={c.id} value={c.id}>
                   {c.name}
@@ -276,6 +288,7 @@ export function BulkUploadMockDialog({
               ))}
             </SelectContent>
           </Select>
+
         </div>
 
         {/* Mock meta */}
@@ -372,7 +385,7 @@ export function BulkUploadMockDialog({
               </Badge>
             )}
             {!chapterId && rows.length > 0 && (
-              <span className="text-rose-400">Pick a chapter to enable import.</span>
+              <span className="text-rose-400">Pick a chapter (or All Chapters) to enable import.</span>
             )}
             {chapterId && !title.trim() && rows.length > 0 && (
               <span className="text-rose-400">Add a title to enable import.</span>

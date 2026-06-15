@@ -173,6 +173,13 @@ export function BulkUploadMockDialog({
           level: (level || "professional") as string,
           subject_id: subjectId || null,
           duration_seconds: Math.max(60, Math.round(durationMin * 60)),
+          difficulty: "medium",
+          status: "draft",
+          is_public: true,
+          randomize_questions: true,
+          randomize_options: false,
+          negative_marking: 0,
+          passing_marks: 0,
           items: validRows.map((r) => ({
             question: r.question,
             question_type: r.question_type,

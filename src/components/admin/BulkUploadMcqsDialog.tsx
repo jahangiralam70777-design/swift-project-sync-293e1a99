@@ -449,8 +449,9 @@ export function BulkUploadMcqsDialog({
             </div>
           </div>
         )}
+        </div>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 px-6 pb-6 pt-2">
           <Button variant="ghost" onClick={onClose}>
             <X className="mr-1 h-4 w-4" /> Cancel
           </Button>

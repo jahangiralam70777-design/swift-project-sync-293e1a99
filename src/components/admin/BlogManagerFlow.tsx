@@ -1212,11 +1212,17 @@ function PostEditorModal({
                     <CodeIcon className="h-3.5 w-3.5" />
                   </TBtn>
                   <TBtn
+                    onClick={() => contentImgInputRef.current?.click()}
+                    label={contentUploader.uploading ? "Uploading…" : "Upload image"}
+                  >
+                    <Upload className="h-3.5 w-3.5" />
+                  </TBtn>
+                  <TBtn
                     onClick={() => {
                       const url = prompt("Image URL");
                       if (url) wrap(`![alt](${url})`, "");
                     }}
-                    label="Image"
+                    label="Image from URL"
                   >
                     <ImgInline className="h-3.5 w-3.5" />
                   </TBtn>

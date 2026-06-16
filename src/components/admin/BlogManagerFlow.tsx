@@ -78,6 +78,7 @@ import {
   adminRunScheduledPublish,
   adminExportPosts,
 } from "@/lib/blog.functions";
+import { adminUploadBlogImage } from "@/lib/blog-upload.functions";
 import {
   Dialog,
   DialogContent,

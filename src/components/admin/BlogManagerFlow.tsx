@@ -919,6 +919,8 @@ function PostEditorModal({
   const [revisions, setRevisions] = useState<{ at: string; title: string; content: string }[]>([]);
   const dirtyRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const contentImgInputRef = useRef<HTMLInputElement | null>(null);
+  const contentUploader = useBlogImageUpload();
 
   useEffect(() => {
     if (postId === "new") {

@@ -1514,41 +1514,122 @@ function TBtn({ children, onClick, label }: { children: React.ReactNode; onClick
   );
 }
 
+// Shared upload helper — uploads to Supabase Storage via server fn, returns public URL.
+const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
+const MAX_UPLOAD_BYTES = 8 * 1024 * 1024;
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result || "");
+      const comma = result.indexOf(",");
+      resolve(comma >= 0 ? result.slice(comma + 1) : result);
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
+export function useBlogImageUpload() {
+  const upload = useServerFn(adminUploadBlogImage);
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  async function run(file: File): Promise<string | null> {
+    if (!ACCEPTED_IMAGE_TYPES.includes(file.type.toLowerCase())) {
+      toast.error("Unsupported file", { description: "Use JPG, PNG, WEBP or GIF." });
+      return null;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      toast.error("File too large", { description: "Maximum size is 8MB." });
+      return null;
+    }
+    setUploading(true);
+    setProgress(10);
+    try {
+      const base64 = await fileToBase64(file);
+      setProgress(55);
+      const res = await upload({
+        data: { filename: file.name, contentType: file.type, base64 },
+      });
+      setProgress(100);
+      toast.success("Image uploaded");
+      return res.url;
+    } catch (e: any) {
+      toast.error("Upload failed", { description: e?.message ?? "Try again" });
+      return null;
+    } finally {
+      setTimeout(() => {
+        setUploading(false);
+        setProgress(0);
+      }, 400);
+    }
+  }
+  return { upload: run, uploading, progress };
+}
+
 function DropZone({ onUrl }: { onUrl: (url: string) => void }) {
   const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const { upload, uploading, progress } = useBlogImageUpload();
+
+  async function handleFile(file: File | undefined | null) {
+    if (!file) return;
+    const url = await upload(file);
+    if (url) onUrl(url);
+  }
+
   return (
-    <div
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragOver(true);
-      }}
-      onDragLeave={() => setDragOver(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setDragOver(false);
-        const file = e.dataTransfer.files?.[0];
-        if (file && file.type.startsWith("image/")) {
-          const reader = new FileReader();
-          reader.onload = () => onUrl(String(reader.result));
-          reader.readAsDataURL(file);
-          toast.message("Image attached as data URL", {
-            description: "Tip: upload to your CDN and paste the URL for production.",
-          });
-        }
-      }}
-      className={`flex h-32 cursor-pointer items-center justify-center rounded-xl border-2 border-dashed text-center text-xs transition ${
-        dragOver
-          ? "border-primary/60 bg-primary/10 text-primary"
-          : "border-border/60 bg-background/40 text-muted-foreground hover:border-primary/40"
-      }`}
-    >
-      <div>
-        <Upload className="mx-auto mb-1 h-5 w-5" />
-        Drag & drop image
+    <div className="space-y-2">
+      <input
+        ref={inputRef}
+        type="file"
+        accept={ACCEPTED_IMAGE_TYPES.join(",")}
+        className="hidden"
+        onChange={(e) => {
+          handleFile(e.target.files?.[0]);
+          e.currentTarget.value = "";
+        }}
+      />
+      <div
+        onClick={() => !uploading && inputRef.current?.click()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          handleFile(e.dataTransfer.files?.[0]);
+        }}
+        role="button"
+        tabIndex={0}
+        aria-busy={uploading}
+        className={`flex h-32 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed text-center text-xs transition ${
+          dragOver
+            ? "border-primary/60 bg-primary/10 text-primary"
+            : "border-border/60 bg-background/40 text-muted-foreground hover:border-primary/40 hover:text-foreground"
+        } ${uploading ? "pointer-events-none opacity-70" : ""}`}
+      >
+        <Upload className="h-5 w-5" />
+        <div className="font-medium">
+          {uploading ? "Uploading…" : "Click or drop image to upload"}
+        </div>
+        <div className="text-[10px] opacity-70">JPG · PNG · WEBP · GIF · up to 8MB</div>
+        {uploading && (
+          <div className="mt-1 h-1 w-2/3 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full bg-primary transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
 
 // very light markdown → HTML for preview
 function markdownish(src: string) {

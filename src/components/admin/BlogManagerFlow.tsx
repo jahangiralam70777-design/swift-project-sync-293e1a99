@@ -1271,6 +1271,25 @@ function PostEditorModal({
                   </div>
                 )}
 
+                <input
+                  ref={contentImgInputRef}
+                  type="file"
+                  accept={ACCEPTED_IMAGE_TYPES.join(",")}
+                  className="hidden"
+                  onChange={(e) => {
+                    void uploadAndInsertImage(e.target.files?.[0]);
+                    e.currentTarget.value = "";
+                  }}
+                />
+                {contentUploader.uploading && (
+                  <div className="flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/5 px-3 py-1.5 text-[11px] text-primary">
+                    <Upload className="h-3 w-3 animate-pulse" />
+                    Uploading image… {contentUploader.progress}%
+                    <div className="ml-2 h-1 flex-1 overflow-hidden rounded-full bg-primary/20">
+                      <div className="h-full bg-primary transition-all" style={{ width: `${contentUploader.progress}%` }} />
+                    </div>
+                  </div>
+                )}
                 <div className={split ? "grid gap-3 lg:grid-cols-2" : ""}>
                   <textarea
                     ref={textareaRef}
@@ -1281,6 +1300,28 @@ function PostEditorModal({
                     onKeyDown={(e) => {
                       if (e.key === "/" && e.currentTarget.selectionStart === 0) setSlashOpen(true);
                       if (e.key === "Escape") setSlashOpen(false);
+                    }}
+                    onPaste={(e) => {
+                      const item = Array.from(e.clipboardData?.items ?? []).find((i) =>
+                        i.type.startsWith("image/"),
+                      );
+                      if (item) {
+                        const file = item.getAsFile();
+                        if (file) {
+                          e.preventDefault();
+                          void uploadAndInsertImage(file);
+                        }
+                      }
+                    }}
+                    onDragOver={(e) => {
+                      if (e.dataTransfer.types.includes("Files")) e.preventDefault();
+                    }}
+                    onDrop={(e) => {
+                      const file = e.dataTransfer.files?.[0];
+                      if (file && file.type.startsWith("image/")) {
+                        e.preventDefault();
+                        void uploadAndInsertImage(file);
+                      }
                     }}
                   />
                   {split && (

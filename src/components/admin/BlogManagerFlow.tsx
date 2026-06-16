@@ -1081,6 +1081,16 @@ function PostEditorModal({
     });
   }
 
+  async function uploadAndInsertImage(file: File | null | undefined) {
+    if (!file) return;
+    const url = await contentUploader.upload(file);
+    if (url) {
+      const alt = file.name.replace(/\.[a-z0-9]+$/i, "").slice(0, 80) || "image";
+      wrap(`\n![${alt}](${url})\n`, "");
+    }
+  }
+
+
   return (
     <div className="fixed inset-0 z-50 flex items-stretch justify-center overflow-y-auto bg-background/80 p-0 backdrop-blur-md sm:p-4">
       <div className={`my-0 flex w-full flex-col overflow-hidden rounded-none border border-border/60 bg-card shadow-2xl sm:my-4 sm:rounded-2xl ${fullscreen ? "max-w-none sm:my-0 sm:rounded-none" : "max-w-6xl"}`}>
